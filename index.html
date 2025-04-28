@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+  <meta charset="UTF-8">
+  <title>زلزله‌های اخیر ایران</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <style>
+    body {
+      font-family: 'Vazir', sans-serif;
+      background-color: #121212;
+      color: #e0e0e0;
+      text-align: center;
+      padding: 20px;
+      direction: rtl;
+    }
+    h1 {
+      color: #bb86fc;
+    }
+    #globe {
+      width: 100%;
+      height: 600px;
+      margin: 20px auto;
+    }
+    .buttons button {
+      background-color: #3700b3;
+      color: #fff;
+      padding: 10px 20px;
+      margin: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .buttons button:hover {
+      background-color: #6200ea;
+    }
+    .impact-box {
+      background-color: #1e1e1e;
+      padding: 20px;
+      margin-top: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      text-align: right;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>زلزله‌های اخیر ایران + شبیه‌سازی تأثیرات</h1>
+
+  <div class="buttons">
+    <button onclick="loadEarthquakes()">نمایش زلزله‌های اخیر ایران</button>
+    <button onclick="showImpact(5)">۵ ریشتر</button>
+    <button onclick="showImpact(6)">۶ ریشتر</button>
+    <button onclick="showImpact(7)">۷ ریشتر</button>
+    <button onclick="showImpact(8)">۸ ریشتر</button>
+    <button onclick="showImpact(9)">۹ ریشتر</button>
+    <button onclick="showImpact(10)">۱۰ ریشتر</button>
+  </div>
+
+  <div id="globe">برای نمایش زلزله‌ها، دکمه بالا را فشار دهید.</div>
+
+  <div class="impact-box" id="impact-box">
+    لطفاً شدت زلزله را انتخاب کنید تا تأثیر آن نمایش داده شود.
+  </div>
+
+  <script>
+    const impactText = {
+      5: "📌 زلزله ۵ ریشتر:\n - احساس می‌شود، اما معمولاً خسارت جدی وارد نمی‌کند.",
+      6: "⚠️ زلزله ۶ ریشتر:\n - خسارات متوسط به ساختمان‌ها، لرزش شدیدتر حس می‌شود.",
+      7: "🚨 زلزله ۷ ریشتر:\n - تخریب گسترده در مناطق نزدیک، خطر برای جان انسان‌ها.",
+      8: "🔥 زلزله ۸ ریشتر:\n - ویرانی سنگین در سطح وسیع، زیرساخت‌ها به‌شدت آسیب می‌بینند.",
+      9: "💀 زلزله ۹ ریشتر:\n - یک فاجعه انسانی و زیست‌محیطی عظیم، احتمال سونامی بسیار زیاد.",
+      10: "☠️ زلزله ۱۰ ریشتر:\n - نابودی کامل مناطق وسیع، تغییر شکل زمین، آسیب شدید به کره زمین."
+    };
+
+    function showImpact(mag) {
+      document.getElementById('impact-box').innerHTML =
+        `<strong>${impactText[mag].replace(/\n/g, "<br>")}</strong>`;
+    }
+
+    function loadEarthquakes() {
+      document.getElementById('globe').innerHTML = "⏳ در حال بارگذاری اطلاعات زلزله‌ها...";
+
+      fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_month.geojson')
+        .then(res => res.json())
+        .then(data => {
+          const features = data.features.filter(f => f.properties.place.includes('Iran'));
+
+          if (features.length === 0) {
+            document.getElementById('globe').innerHTML = "❌ هیچ زلزله‌ای در ایران در هفته گذشته گزارش نشده.";
+            return;
+          }
+
+          const lats = features.map(f => f.geometry.coordinates[1]);
+          const lons = features.map(f => f.geometry.coordinates[0]);
+          const mags = features.map(f => f.properties.mag);
+          const texts = features.map(f =>
+            `📍 ${f.properties.place}<br>شدت: ${f.properties.mag}<br>زمان: ${new Date(f.properties.time).toLocaleString('fa-IR')}`
+          );
+
+          Plotly.newPlot('globe', [{
+            type: 'scattergeo',
+            mode: 'markers',
+            lat: lats,
+            lon: lons,
+            text: texts,
+            hoverinfo: 'text',
+            marker: {
+              size: mags.map(m => m * 3),
+              color: mags,
+              colorscale: 'Reds',
+              showscale: true
+            }
+          }], {
+            geo: {
+              projection: { type: 'orthographic' },
+              showland: true,
+              landcolor: 'green',
+              showocean: true,
+              oceancolor: 'lightblue',
+              lataxis: { range: [10, 45] },
+              lonaxis: { range: [40, 65] }
+            },
+            title: 'زلزله‌های اخیر در ایران'
+          });
+        })
+        .catch(err => {
+          document.getElementById('globe').innerHTML = "⛔ خطا در دریافت اطلاعات زلزله.";
+          console.error(err);
+        });
+    }
+  </script>
+
+</body>
+</html>
